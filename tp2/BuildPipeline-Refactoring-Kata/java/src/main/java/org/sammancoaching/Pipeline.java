@@ -17,38 +17,38 @@ public class Pipeline {
     }
 
     public void run(Project project) {
-        boolean testsPassed;
-        boolean deploySuccessful;
+        boolean unitTestsPassedOrAbsent;
+        boolean productionDeploymentSucceeded;
 
         if (project.hasTests()) {
             if ("success".equals(project.runTests())) {
                 log.info("Tests passed");
-                testsPassed = true;
+                unitTestsPassedOrAbsent = true;
             } else {
                 log.error("Tests failed");
-                testsPassed = false;
+                unitTestsPassedOrAbsent = false;
             }
         } else {
             log.info("No tests");
-            testsPassed = true;
+            unitTestsPassedOrAbsent = true;
         }
 
-        if (testsPassed) {
+        if (unitTestsPassedOrAbsent) {
             if ("success".equals(project.deploy())) {
                 log.info("Deployment successful");
-                deploySuccessful = true;
+                productionDeploymentSucceeded = true;
             } else {
                 log.error("Deployment failed");
-                deploySuccessful = false;
+                productionDeploymentSucceeded = false;
             }
         } else {
-            deploySuccessful = false;
+            productionDeploymentSucceeded = false;
         }
 
         if (config.sendEmailSummary()) {
             log.info("Sending email");
-            if (testsPassed) {
-                if (deploySuccessful) {
+            if (unitTestsPassedOrAbsent) {
+                if (productionDeploymentSucceeded) {
                     emailer.send("Deployment completed successfully");
                 } else {
                     emailer.send("Deployment failed");
