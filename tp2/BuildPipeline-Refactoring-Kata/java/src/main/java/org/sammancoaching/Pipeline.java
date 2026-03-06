@@ -6,6 +6,7 @@ import org.sammancoaching.dependencies.Logger;
 import org.sammancoaching.dependencies.Project;
 
 public class Pipeline {
+
     private final Config config;
     private final Emailer emailer;
     private final Logger log;
@@ -16,53 +17,61 @@ public class Pipeline {
         this.log = log;
     }
 
-    private boolean isSuccess(String result) {
-        return "success".equals(result);
+    public void run(Project project) {
+        boolean testsPassed = runTestsOrAssumeOkIfNone(project);
+
+        boolean deploySuccessful = false;
+        if (testsPassed) {
+            deploySuccessful = deploy(project);
+        }
+
+        maybeSendSummaryEmail(testsPassed, deploySuccessful);
     }
 
-
-    public void run(Project project) {
-        boolean unitTestsPassedOrAbsent;
-        boolean productionDeploymentSucceeded;
-
-        if (project.hasTests()) {
-            if (isSuccess(project.runTests())) {
-                log.info("Tests passed");
-                unitTestsPassedOrAbsent = true;
-            } else {
-                log.error("Tests failed");
-                unitTestsPassedOrAbsent = false;
-            }
-        } else {
+    private boolean runTestsOrAssumeOkIfNone(Project project) {
+        if (!project.hasTests()) {
             log.info("No tests");
-            unitTestsPassedOrAbsent = true;
+            return true;
         }
 
-        if (unitTestsPassedOrAbsent) {
-            if (isSuccess(project.deploy())) {
-                log.info("Deployment successful");
-                productionDeploymentSucceeded = true;
-            } else {
-                log.error("Deployment failed");
-                productionDeploymentSucceeded = false;
-            }
+        boolean passed = isSuccess(project.runTests());
+        if (passed) {
+            log.info("Tests passed");
         } else {
-            productionDeploymentSucceeded = false;
+            log.error("Tests failed");
+        }
+        return passed;
+    }
+
+    private boolean deploy(Project project) {
+        boolean ok = isSuccess(project.deploy());
+
+        if (ok) {
+            log.info("Deployment successful");
+        } else {
+            log.error("Deployment failed");
         }
 
-        if (config.sendEmailSummary()) {
-            log.info("Sending email");
-            if (unitTestsPassedOrAbsent) {
-                if (productionDeploymentSucceeded) {
-                    emailer.send("Deployment completed successfully");
-                } else {
-                    emailer.send("Deployment failed");
-                }
-            } else {
-                emailer.send("Tests failed");
-            }
-        } else {
+        return ok;
+    }
+
+    private void maybeSendSummaryEmail(boolean testsPassed, boolean deploySuccessful) {
+        if (!config.sendEmailSummary()) {
             log.info("Email disabled");
+            return;
         }
+
+        log.info("Sending email");
+        emailer.send(buildEmailMessage(testsPassed, deploySuccessful));
+    }
+
+    private String buildEmailMessage(boolean testsPassed, boolean deploySuccessful) {
+        if (!testsPassed) return "Tests failed";
+        if (!deploySuccessful) return "Deployment failed";
+        return "Deployment completed successfully";
+    }
+
+    private boolean isSuccess(String result) {
+        return "success".equals(result);
     }
 }
