@@ -16,12 +16,17 @@ public class Pipeline {
         this.log = log;
     }
 
+    private boolean isSuccess(String result) {
+        return "success".equals(result);
+    }
+
+
     public void run(Project project) {
         boolean unitTestsPassedOrAbsent;
         boolean productionDeploymentSucceeded;
 
         if (project.hasTests()) {
-            if ("success".equals(project.runTests())) {
+            if (isSuccess(project.runTests())) {
                 log.info("Tests passed");
                 unitTestsPassedOrAbsent = true;
             } else {
@@ -34,7 +39,7 @@ public class Pipeline {
         }
 
         if (unitTestsPassedOrAbsent) {
-            if ("success".equals(project.deploy())) {
+            if (isSuccess(project.deploy())) {
                 log.info("Deployment successful");
                 productionDeploymentSucceeded = true;
             } else {
