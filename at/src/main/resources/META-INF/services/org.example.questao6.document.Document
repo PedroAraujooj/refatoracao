@@ -1,0 +1,3 @@
+org.example.questao6.document.PdfDocument
+org.example.questao6.document.HtmlDocument
+org.example.questao6.document.WordDocument
